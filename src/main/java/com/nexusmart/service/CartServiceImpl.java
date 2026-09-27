@@ -4,7 +4,6 @@ import com.nexusmart.dto.CartItemResponseDto;
 import com.nexusmart.dto.CartResponseDto;
 import com.nexusmart.entity.*;
 import com.nexusmart.repository.*;
-import com.nexusmart.service.CartService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +45,16 @@ public class CartServiceImpl implements CartService {
             Cart newCart = Cart.builder().user(user).build();
             return cartRepository.save(newCart);
         });
+
+        // 🛑 SINGLE-STORE CART VALIDATION ENFORCEMENT
+        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+            Long existingMerchantId = cart.getItems().get(0).getProduct().getMerchant().getId();
+            Long incomingMerchantId = product.getMerchant().getId();
+
+            if (!existingMerchantId.equals(incomingMerchantId)) {
+                throw new IllegalStateException("Cannot mix items from different stores in one order. Clear cart first.");
+            }
+        }
 
         Optional<CartItem> existingItem = cart.getItems().stream()
                 .filter(item -> item.getProduct().getId().equals(productId))

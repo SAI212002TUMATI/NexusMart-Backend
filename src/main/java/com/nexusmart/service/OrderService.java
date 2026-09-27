@@ -1,29 +1,33 @@
 package com.nexusmart.service;
 
-import com.nexusmart.entity.Cart;
-import com.nexusmart.entity.Order;
-import com.nexusmart.entity.OrderStatus;
-import com.nexusmart.entity.User;
+import com.nexusmart.entity.*;
 import com.nexusmart.repository.CartRepository;
 import com.nexusmart.repository.OrderRepository;
+import com.nexusmart.repository.ProductRepository;
 import com.nexusmart.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 @Service
+@Transactional
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
-    public OrderService(OrderRepository orderRepository, CartRepository cartRepository, UserRepository userRepository) {
+    public OrderService(OrderRepository orderRepository, CartRepository cartRepository, 
+                        UserRepository userRepository, ProductRepository productRepository) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
+        this.productRepository = productRepository;
     }
 
-    // Place an order from the user's cart
+    // Place an order from the user's cart mapped to the specific store merchant
     public Order placeOrder(Long userId) {
         User customer = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -35,20 +39,34 @@ public class OrderService {
             throw new RuntimeException("Cannot place order with an empty cart");
         }
 
-        // Calculate total price
-        double totalPrice = cart.getItems().stream()
-                .mapToDouble(item -> item.getProduct().getPrice() * item.getQuantity())
-                .sum();
+        // Identify the fulfilling merchant from the first cart item (guaranteed single-store)
+        User merchant = cart.getItems().get(0).getProduct().getMerchant();
 
-        // Create order
+        // Calculate total price and verify/deduct stock
+        double totalPrice = 0.0;
+        for (CartItem item : cart.getItems()) {
+            Product product = item.getProduct();
+            if (product.getStockQuantity() < item.getQuantity()) {
+                throw new RuntimeException("Insufficient stock for product: " + product.getName());
+            }
+
+            // Deduct stock quantity
+            product.setStockQuantity(product.getStockQuantity() - item.getQuantity());
+            productRepository.save(product);
+
+            totalPrice += product.getPrice() * item.getQuantity();
+        }
+
+        // Create order linked to customer and merchant
         Order order = new Order();
         order.setCustomer(customer);
+        order.setMerchant(merchant);
         order.setTotalPrice(totalPrice);
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.PLACED);
 
         Order savedOrder = orderRepository.save(order);
 
-        // Clear the cart after order is placed
+        // Clear the cart after order is successfully placed
         cart.getItems().clear();
         cartRepository.save(cart);
 

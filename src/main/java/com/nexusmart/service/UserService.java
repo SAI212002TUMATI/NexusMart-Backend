@@ -2,6 +2,7 @@ package com.nexusmart.service;
 
 import com.nexusmart.dto.UserRegistrationDto;
 import com.nexusmart.dto.UserLoginDto;
+import com.nexusmart.dto.MerchantRegisterRequest;
 import com.nexusmart.entity.Role;
 import com.nexusmart.entity.User;
 import com.nexusmart.repository.UserRepository;
@@ -26,8 +27,8 @@ public class UserService {
         this.mailSender = mailSender;
     }
 
-    // 🔐 Register user with automatic BCrypt password hashing, 3-Role Guardrails, &
-    // Email OTP
+    // 🔐 Register standard user with automatic BCrypt password hashing, 3-Role
+    // Guardrails, & Email OTP
     public User registerUser(UserRegistrationDto dto) {
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email is already registered!");
@@ -61,6 +62,45 @@ public class UserService {
         sendOtpEmail(savedUser.getEmail(), generatedOtp);
 
         return savedUser;
+    }
+
+    // 🏪 Register Merchant / Kirana Store Owner with shop details, phone
+    // validation, and OTP
+    public User registerMerchant(MerchantRegisterRequest dto) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email is already registered!");
+        }
+
+        if (dto.getPhone() != null && userRepository.existsByPhone(dto.getPhone())) {
+            throw new RuntimeException("Phone number is already registered!");
+        }
+
+        User merchant = new User();
+        merchant.setName(dto.getName());
+        merchant.setEmail(dto.getEmail());
+        merchant.setPassword(passwordEncoder.encode(dto.getPassword()));
+        merchant.setPhone(dto.getPhone());
+
+        // Assign ROLE_MERCHANT
+        merchant.setRole(Role.MERCHANT);
+
+        // Store specific merchant/kirana shop details and coordinates
+        merchant.setShopName(dto.getShopName());
+        merchant.setShopAddress(dto.getShopAddress());
+        merchant.setPincode(dto.getPincode());
+        merchant.setLatitude(dto.getLatitude());
+        merchant.setLongitude(dto.getLongitude());
+
+        // OTP Verification setup
+        merchant.setVerified(false);
+        String generatedOtp = String.format("%06d", new Random().nextInt(1000000));
+        merchant.setOtp(generatedOtp);
+        merchant.setOtpExpiry(LocalDateTime.now().plusMinutes(15));
+
+        User savedMerchant = userRepository.save(merchant);
+        sendOtpEmail(savedMerchant.getEmail(), generatedOtp);
+
+        return savedMerchant;
     }
 
     // 🔑 Verify user credentials during login
@@ -119,24 +159,58 @@ public class UserService {
     }
 
     public void resendVerificationOtp(String email) {
-        // 1. Fetch user through the repository
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Error: Email address not found."));
 
-        // 2. Safety Check
         if (user.isVerified()) {
             throw new RuntimeException("Error: This account is already fully verified. Please log in.");
         }
 
-        // 3. Generate a brand-new random 6-digit code
         String newOtp = String.format("%06d", new Random().nextInt(1000000));
 
-        // 4. Update the user record
         user.setOtp(newOtp);
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
 
-        // 5. Fire it off using your internal helper method 👈 FIXED HERE
         sendOtpEmail(user.getEmail(), newOtp);
+    }
+
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        // Generate a 6-digit reset code
+        String resetCode = String.format("%06d", new java.util.Random().nextInt(999999));
+
+        user.setResetToken(resetCode);
+        user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(15)); // Valid for 15 mins
+        userRepository.save(user);
+
+        // Send email
+         SimpleMailMessage message = new SimpleMailMessage();
+         message.setTo(email);
+         message.setSubject("NexusMart - Password Reset Code");
+         message.setText("Your password reset code is: " + resetCode + "\nIt will
+         expire in 15 minutes.");
+         mailSender.send(message);
+    }
+
+    public void resetPassword(String email, String token, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+
+        if (user.getResetToken() == null || !user.getResetToken().equals(token)) {
+            throw new RuntimeException("Invalid reset token.");
+        }
+
+        if (user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Reset token has expired.");
+        }
+
+        // Update password and clear the reset token
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
     }
 }

@@ -1,11 +1,5 @@
 package com.nexusmart.entity;
 
 public enum OrderStatus {
-
-    PENDING,
-    PROCESSING,
-    SHIPPED,
-    DELIVERED,
-    CANCELLED
-
+    PLACED, ACCEPTED, PACKING, READY_FOR_PICKUP, COMPLETED, CANCELLED
 }
