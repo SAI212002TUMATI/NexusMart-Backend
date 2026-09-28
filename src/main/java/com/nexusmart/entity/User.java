@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -37,10 +38,10 @@ public class User {
     @Column(name = "otp", length = 6)
     private String otp;
 
-    @Column(name = "otp_Expiry")
-    private java.time.LocalDateTime otpExpiry;
+    @Column(name = "otp_expiry")
+    private LocalDateTime otpExpiry;
 
-    // --- Added for Kirana / Street Store Owners ---
+    // --- Kirana / Street Store Owner Fields ---
 
     @Column(name = "shop_name")
     private String shopName;
@@ -60,8 +61,4 @@ public class User {
     private String resetToken;
 
     private LocalDateTime resetTokenExpiry;
-
-    public Long getId() {
-        return this.id;
-    }
 }

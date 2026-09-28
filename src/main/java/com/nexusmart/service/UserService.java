@@ -187,12 +187,11 @@ public class UserService {
         userRepository.save(user);
 
         // Send email
-         SimpleMailMessage message = new SimpleMailMessage();
-         message.setTo(email);
-         message.setSubject("NexusMart - Password Reset Code");
-         message.setText("Your password reset code is: " + resetCode + "\nIt will
-         expire in 15 minutes.");
-         mailSender.send(message);
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("NexusMart - Password Reset Code");
+        message.setText("Your password reset code is: " + resetCode + "\nIt will  expire in 15 minutes.");
+        mailSender.send(message);
     }
 
     public void resetPassword(String email, String token, String newPassword) {

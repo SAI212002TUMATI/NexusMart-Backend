@@ -23,32 +23,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(
+                        org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll() // Allow
+                                                                                                         // preflight
+                                                                                                         // requests
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/protected/**").permitAll()
-
                         .requestMatchers("/api/cart/**").permitAll()
-
                         .requestMatchers("/api/categories/**").permitAll()
-
                         .requestMatchers("/api/orders/**").permitAll()
-
                         .requestMatchers("/api/ai-search", "/api/ai-search/**").permitAll()
-
                         .requestMatchers("/api/ai-assistant", "/api/ai-assistant/**").permitAll()
-
-                        // 🌍 Allow viewing the catalog (Both the root list and specific product IDs)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/products", "/api/products/**")
                         .permitAll()
-
-                        // 📥 Allow adding products for testing (Both the root endpoint and any
-                        // sub-paths)
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products", "/api/products/**")
                         .permitAll()
-
                         .anyRequest().authenticated())
-
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
