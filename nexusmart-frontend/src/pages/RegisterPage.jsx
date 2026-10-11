@@ -7,11 +7,13 @@ const RegisterPage = () => {
         name: '',
         email: '',
         password: '',
-        role: 'CUSTOMER', // Default role
+        role: 'CUSTOMER',
         shopName: '',
         shopAddress: '',
         pincode: '',
-        phone: ''
+        phone: '',
+        latitude: '',   // 🌟 Added
+        longitude: ''   // 🌟 Added
     });
 
     const [error, setError] = useState('');
@@ -29,14 +31,11 @@ const RegisterPage = () => {
 
         try {
             if (formData.role === 'MERCHANT') {
-                // Call merchant registration endpoint
                 await authService.registerMerchant(formData);
             } else {
-                // Call standard user registration endpoint
                 await authService.register(formData);
             }
 
-            // Redirect to OTP verification page carrying the email
             navigate('/verify-otp', { state: { email: formData.email } });
         } catch (err) {
             setError(err.response?.data || 'Registration failed. Please try again.');
@@ -105,7 +104,7 @@ const RegisterPage = () => {
                     {/* Conditional Merchant Fields */}
                     {formData.role === 'MERCHANT' && (
                         <div style={{ background: '#f9f9f9', padding: '15px', borderRadius: '6px', marginBottom: '15px', border: '1px solid #eee' }}>
-                            <h4 style={{ margin: '0  0 10px 0', color: '#333' }}>Store Details</h4>
+                            <h4 style={{ margin: '0 0 10px 0', color: '#333' }}>Store Details & Location</h4>
                             
                             <div style={{ marginBottom: '10px' }}>
                                 <label style={{ display: 'block', marginBottom: '3px', fontSize: '13px' }}>Phone Number</label>
@@ -122,10 +121,48 @@ const RegisterPage = () => {
                                 <input type="text" name="shopAddress" value={formData.shopAddress} onChange={handleChange} required style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }} />
                             </div>
 
-                            <div>
+                            <div style={{ marginBottom: '10px' }}>
                                 <label style={{ display: 'block', marginBottom: '3px', fontSize: '13px' }}>Pincode</label>
                                 <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} required style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }} />
                             </div>
+
+                            {/* Latitude & Longitude Fields */}
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '3px', fontSize: '13px' }}>Latitude</label>
+                                    <input type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} placeholder="e.g. 17.3850" style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ display: 'block', marginBottom: '3px', fontSize: '13px' }}>Longitude</label>
+                                    <input type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} placeholder="e.g. 78.4867" style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
+
+                            {/* Auto-detect Location Button */}
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                    if (navigator.geolocation) {
+                                        navigator.geolocation.getCurrentPosition(
+                                            (position) => {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    latitude: position.coords.latitude,
+                                                    longitude: position.coords.longitude
+                                                }));
+                                            },
+                                            (error) => {
+                                                alert("Unable to retrieve location: " + error.message);
+                                            }
+                                        );
+                                    } else {
+                                        alert("Geolocation is not supported by your browser");
+                                    }
+                                }}
+                                style={{ width: '100%', padding: '6px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                            >
+                                📍 Detect My Current Location
+                            </button>
                         </div>
                     )}
 

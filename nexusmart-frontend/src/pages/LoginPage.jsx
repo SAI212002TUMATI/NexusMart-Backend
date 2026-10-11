@@ -1,35 +1,44 @@
-import React, {useState} from 'react'; 
-import {useNavigate,Link} from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
 
-const LoginPage=()=>{
-    const [email,setEmail] = useState('');
-    const [password,setPassword]=useState('');
-    const [error, setError]=useState("");
-    const [loading, setLoading]= useState(false);
+const LoginPage = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
 
-    const handleLogin = async (e)=>{
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        try{
-            const data = await authService.login({email,password});
+        try {
+            const data = await authService.login({ email, password });
             
-            localStorage.setItem('token',data.token);
-            localStorage.setItem('user',JSON.stringify(data));
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data));
             
-            navigate('/');
+            // Save role and userId explicitly for routing and inventory fetching
+            localStorage.setItem('role', data.role);
+            localStorage.setItem('userId', data.id);
 
-        }catch(err)  {
-            setError(err.response?.data?.message||'Invalid email or password. Please try again.');
+            // Role-based redirection
+            if (data.role === 'MERCHANT') {
+                navigate('/merchant/dashboard');
+            } else {
+                navigate('/customer/dashboard');
+            }
 
-        }finally{
+        } catch (err) {
+            setError(err.response?.data?.message || 'Invalid email or password. Please try again.');
+        } finally {
             setLoading(false);
         }
     };
+
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
             <div style={{ width: '400px', padding: '30px', border: '1px solid #ccc', borderRadius: '8px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
@@ -78,5 +87,3 @@ const LoginPage=()=>{
 };
 
 export default LoginPage;
-
-

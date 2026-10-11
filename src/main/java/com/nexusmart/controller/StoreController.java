@@ -35,4 +35,9 @@ public class StoreController {
     public ResponseEntity<List<Product>> getStoreProducts(@PathVariable Long storeId) {
         return ResponseEntity.ok(productRepository.findByMerchantId(storeId));
     }
+    @GetMapping
+    public ResponseEntity<List<User>> getAllStores() {
+        // Assuming you have a method in storeService or you can use your repository
+        return ResponseEntity.ok(storeService.getAllStores());
+    }
 }

@@ -19,8 +19,10 @@ public class OrderController {
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<Order> placeOrder(@RequestParam Long userId) {
-        Order order = orderService.placeOrder(userId);
+    public ResponseEntity<Order> placeOrder(
+            @RequestParam Long userId, 
+            @RequestParam Long merchantId) {
+        Order order = orderService.placeOrder(userId, merchantId);
         return ResponseEntity.ok(order);
     }
 
@@ -31,7 +33,9 @@ public class OrderController {
     }
 
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<Order> updateOrderStatus(@PathVariable Long orderId, @RequestParam OrderStatus status) {
+    public ResponseEntity<Order> updateOrderStatus(
+            @PathVariable Long orderId, 
+            @RequestParam OrderStatus status) {
         Order updatedOrder = orderService.updateOrderStatus(orderId, status);
         return ResponseEntity.ok(updatedOrder);
     }

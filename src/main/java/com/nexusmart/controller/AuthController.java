@@ -58,9 +58,14 @@ public class AuthController {
             // GENERATE TOKEN FOR THE AUTHENTICATED USER
             String jwtToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
-            // Return structured response object carrying the passport token
-            AuthResponseDto response = new AuthResponseDto(jwtToken, user.getEmail(), user.getName(),
-                    user.getRole().name());
+            // Return structured response object carrying the user ID and token
+            AuthResponseDto response = new AuthResponseDto(
+                    user.getId(), 
+                    jwtToken, 
+                    user.getEmail(), 
+                    user.getName(),
+                    user.getRole().name()
+            );
             return new ResponseEntity<>(response, HttpStatus.OK);
 
         } catch (RuntimeException e) {

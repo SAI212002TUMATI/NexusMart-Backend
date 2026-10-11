@@ -19,4 +19,7 @@ public class StoreService {
     public List<User> getStoresByPincode(String pincode) {
         return userRepository.findByRoleAndPincode(Role.MERCHANT, pincode);
     }
+    public List<User> getAllStores() {
+        return userRepository.findByRole(Role.MERCHANT);
+    }
 }

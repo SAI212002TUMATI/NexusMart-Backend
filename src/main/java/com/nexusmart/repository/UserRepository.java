@@ -26,4 +26,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findNearbyShops(@Param("userLat") double userLat, 
                                @Param("userLng") double userLng, 
                                @Param("radiusInKm") double radiusInKm);
+     List<User> findByRole(Role role);
 }
