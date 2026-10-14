@@ -8,12 +8,12 @@ const CustomerOrders = () => {
     const [loading, setLoading] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-    const rawUserId = localStorage.getItem('userId')||
-                        currentUser.id||
-                        currentUser.userId||
-                        currentUser.customerId||
+    const rawUserId = localStorage.getItem('userId') ||
+                        currentUser.id ||
+                        currentUser.userId ||
+                        currentUser.customerId ||
                         currentUser.sub;
-    const userId =(rawUserId && rawUserId!=='undefined') ? rawUserId:null;
+    const userId = (rawUserId && rawUserId !== 'undefined') ? rawUserId : null;
 
     useEffect(() => {
         if (userId) {
@@ -26,7 +26,7 @@ const CustomerOrders = () => {
         try {
             const token = localStorage.getItem('token');
             const response = await axios.get(`http://localhost:2121/api/orders/user/${userId}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
             setOrders(Array.isArray(response.data) ? response.data : []);
         } catch (err) {
@@ -56,16 +56,16 @@ const CustomerOrders = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button 
-                        onClick={() => navigate('/customer-dashboard')} 
-                        style={{ padding: '8px 15px', background: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                        onClick={() => navigate('/customer/dashboard')} 
+                        style={{ padding: '8px 15px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        Back to Catalog
+                        ← Back to Dashboard
                     </button>
                     <button 
                         onClick={() => navigate('/cart')} 
                         style={{ padding: '8px 15px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                        View Cart
+                        🛒 View Cart
                     </button>
                 </div>
             </div>

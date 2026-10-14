@@ -18,11 +18,14 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping("/checkout")
+    @PostMapping({"/checkout","/place"})
     public ResponseEntity<Order> placeOrder(
             @RequestParam Long userId, 
-            @RequestParam Long merchantId) {
-        Order order = orderService.placeOrder(userId, merchantId);
+            @RequestParam Long merchantId,
+            @RequestParam(defaultValue = "HOME_DELIVERY") Order.FulfillmentType fulfillmentType,
+            @RequestParam(defaultValue = "COD") Order.PaymentType paymentType) {
+        
+        Order order = orderService.placeOrder(userId, merchantId, fulfillmentType, paymentType);
         return ResponseEntity.ok(order);
     }
 

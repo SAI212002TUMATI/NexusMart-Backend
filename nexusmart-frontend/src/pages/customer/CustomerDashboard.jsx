@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import ProductDetailModal from '../ProductDetailModal';
 
 const CustomerDashboard = () => {
     const navigate = useNavigate();
@@ -8,6 +9,7 @@ const CustomerDashboard = () => {
     const [selectedStore, setSelectedStore] = useState(null);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [selectedModalProduct, setSelectedModalProduct] = useState(null);
 
     // Safely parse user session and check all possible ID property names from login
     const customerUser = JSON.parse(localStorage.getItem('user')) || {};
@@ -49,7 +51,7 @@ const CustomerDashboard = () => {
         }
     };
 
-    const handleAddToCart = async (productId) => {
+    const handleAddToCart = async (productId, quantity = 1) => {
         if (!userId) {
             alert("Please log in as a customer first.");
             navigate('/login');
@@ -57,12 +59,11 @@ const CustomerDashboard = () => {
         }
 
         try {
-            // Since /api/cart/** is permitted in SecurityConfig, sending without an expired token header prevents 403 blocks
             await axios.post(`http://localhost:2121/api/cart/add`, null, {
                 params: { 
                     userId: userId, 
                     productId: productId, 
-                    quantity: 1 
+                    quantity: quantity 
                 }
             });
 
@@ -128,7 +129,11 @@ const CustomerDashboard = () => {
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
                             {products.map(product => (
-                                <div key={product.id} style={{ background: '#fdfdfd', padding: '15px', borderRadius: '6px', border: '1px solid #ddd', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <div 
+                                    key={product.id} 
+                                    onClick={() => setSelectedModalProduct(product)}
+                                    style={{ background: '#fdfdfd', padding: '15px', borderRadius: '6px', border: '1px solid #ddd', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer', transition: 'transform 0.2s', ':hover': { transform: 'translateY(-3px)' } }}
+                                >
                                     <div>
                                         {product.images && product.images.length > 0 ? (
                                             <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'nowrap', gap: '5px', overflowX: 'auto', marginBottom: '8px', paddingBottom: '4px' }}>
@@ -136,7 +141,7 @@ const CustomerDashboard = () => {
                                                     <img 
                                                         key={idx}
                                                         src={`http://localhost:2121${img.imageUrl}`} 
-                                                        alt={`${product.name} - ${idx + 1}`} 
+                                                        alt={`${product.name} ${idx + 1}`} 
                                                         style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd', background: '#fff', flexShrink: 0 }} 
                                                     />
                                                 ))}
@@ -156,7 +161,10 @@ const CustomerDashboard = () => {
                                         </div>
                                         <button 
                                             style={{ width: '100%', padding: '8px', background: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                                            onClick={() => handleAddToCart(product.id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevents opening modal when clicking quick-add button
+                                                handleAddToCart(product.id, 1);
+                                            }}
                                         >
                                             Add to Cart
                                         </button>
@@ -194,6 +202,15 @@ const CustomerDashboard = () => {
                         </div>
                     )}
                 </div>
+            )}
+
+            {/* PRODUCT DETAIL POPUP MODAL */}
+            {selectedModalProduct && (
+                <ProductDetailModal 
+                    product={selectedModalProduct} 
+                    onClose={() => setSelectedModalProduct(null)} 
+                    onAddToCart={(productId, qty) => handleAddToCart(productId, qty)} 
+                />
             )}
         </div>
     );

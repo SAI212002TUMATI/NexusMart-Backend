@@ -32,6 +32,34 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status = OrderStatus.PLACED;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private FulfillmentType fulfillmentType = FulfillmentType.HOME_DELIVERY;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentType paymentType = PaymentType.COD;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
     @Column(nullable = false)
     private LocalDateTime orderDate = LocalDateTime.now();
+
+    public enum FulfillmentType {
+        HOME_DELIVERY,
+        SELF_PICKUP
+    }
+
+    public enum PaymentType {
+        ONLINE,
+        COD
+    }
+
+    public enum PaymentStatus {
+        PENDING,
+        COMPLETED,
+        FAILED
+    }
 }
