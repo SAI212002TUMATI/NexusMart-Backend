@@ -12,14 +12,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/merchant")
-@PreAuthorize("hasRole('MERCHANT')")
+@PreAuthorize("hasAnyAuthority('MERCHANT','ROLE_MERCHANT')")
 public class MerchantOrderController {
     @Autowired
     private MerchantOrderService merchantOrderService;
 
     @GetMapping("/orders")
     public ResponseEntity<List<Order>> getOrders(
-            @RequestParam(required = false) OrderStatus status, 
+            @RequestParam(required = false) OrderStatus status,
             Principal principal) {
         OrderStatus queryStatus = status != null ? status : OrderStatus.PLACED;
         return ResponseEntity.ok(merchantOrderService.getOrdersByStatus(principal.getName(), queryStatus));
@@ -27,9 +27,11 @@ public class MerchantOrderController {
 
     @PatchMapping("/orders/{orderId}/status")
     public ResponseEntity<Order> updateStatus(
-            @PathVariable Long orderId, 
-            @RequestParam OrderStatus status, 
+            @PathVariable Long orderId,
+            @RequestParam("status") String statusStr,
             Principal principal) {
+
+        OrderStatus status = OrderStatus.valueOf(statusStr.toUpperCase().trim());
         return ResponseEntity.ok(merchantOrderService.updateOrderStatus(principal.getName(), orderId, status));
     }
 }

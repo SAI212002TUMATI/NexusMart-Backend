@@ -7,6 +7,7 @@ const MerchantDashboard = () => {
     const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' or 'orders'
     const [inventory, setInventory] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [categories, setCategories] = useState([]); // 👈 Categories state added
     const [loading, setLoading] = useState(false);
 
     // Add Product Modal State
@@ -15,7 +16,7 @@ const MerchantDashboard = () => {
     const [productDescription, setProductDescription] = useState('');
     const [productPrice, setProductPrice] = useState('');
     const [productStock, setProductStock] = useState('');
-    const [productCategoryId, setProductCategoryId] = useState('1'); 
+    const [productCategoryId, setProductCategoryId] = useState(''); // 👈 Default to empty until categories load
     const [imageFiles, setImageFiles] = useState([]); // Local files state
 
     const merchantUser = JSON.parse(localStorage.getItem('user')) || {};
@@ -29,7 +30,20 @@ const MerchantDashboard = () => {
         } else {
             fetchMerchantOrders();
         }
+        fetchCategories(); // 👈 Fetch categories on load
     }, [activeTab]);
+
+    const fetchCategories = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`http://localhost:2121/api/categories`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setCategories(Array.isArray(response.data) ? response.data : []);
+        } catch (err) {
+            console.error("Error fetching categories", err);
+        }
+    };
 
     const fetchInventory = async () => {
         setLoading(true);
@@ -112,6 +126,7 @@ const MerchantDashboard = () => {
             setProductDescription('');
             setProductPrice('');
             setProductStock('');
+            setProductCategoryId('');
             setImageFiles([]);
             fetchInventory();
         } catch (err) {
@@ -217,15 +232,20 @@ const MerchantDashboard = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label style={{ display: 'block', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>Category ID</label>
-                                            <input 
-                                                type="number" 
-                                                placeholder="1" 
+                                            <label style={{ display: 'block', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>Category</label>
+                                            <select 
                                                 value={productCategoryId} 
                                                 onChange={(e) => setProductCategoryId(e.target.value)} 
                                                 required 
-                                                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-                                            />
+                                                style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', background: 'white' }}
+                                            >
+                                                <option value="">-- Select Category --</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat.id} value={cat.id}>
+                                                        {cat.name}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
 
@@ -267,7 +287,7 @@ const MerchantDashboard = () => {
                                                     <img 
                                                         key={idx}
                                                         src={`http://localhost:2121${img.imageUrl}`} 
-                                                        alt={`${product.name} - ${idx + 1}`} 
+                                                        alt={`${product.name} ${idx + 1}`} 
                                                         style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }} 
                                                     />
                                                 ))}
