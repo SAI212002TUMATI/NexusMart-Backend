@@ -49,6 +49,11 @@ public class JwtUtil {
         }
     }
 
+    // 🔍 Extract the role from an active token
+    public String extractRole(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
     // Helper method to parse claims
     private Claims getClaims(String token) {
         return Jwts.parser()

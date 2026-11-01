@@ -10,14 +10,20 @@ const CustomerDashboard = () => {
     const [selectedStore, setSelectedStore] = useState(null);
     const [products, setProducts] = useState([]);
     const [allStoreProducts, setAllStoreProducts] = useState([]);
+    const [globalProducts, setGlobalProducts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedModalProduct, setSelectedModalProduct] = useState(null);
 
     // Dual-Toggle State: 'all' vs 'nearby'
     const [viewMode, setViewMode] = useState('all');
+    // Store Discovery Sub-Mode: 'stores' vs 'global-feed'
+    const [discoveryMode, setDiscoveryMode] = useState('stores'); // 'stores' or 'global-feed'
 
-    // Safely parse user session
+    // Safely parse user session & role
     const customerUser = JSON.parse(localStorage.getItem('user')) || {};
+    const rawRole = localStorage.getItem('role') || customerUser.role || '';
+    const cleanRole = rawRole.replace('ROLE_', '').toUpperCase();
+
     const rawUserId = localStorage.getItem('userId') || 
                       customerUser.id || 
                       customerUser.userId || 
@@ -25,9 +31,23 @@ const CustomerDashboard = () => {
                       customerUser.sub;
     const userId = (rawUserId && rawUserId !== 'undefined') ? rawUserId : null;
 
+    // 🛑 STRICT ROLE GUARD: Block Admins and Merchants from viewing the customer dashboard
     useEffect(() => {
-        fetchStores();
-    }, [viewMode]);
+        if (cleanRole === 'ADMIN') {
+            navigate('/admin/dashboard', { replace: true });
+            return;
+        }
+        if (cleanRole === 'MERCHANT') {
+            navigate('/merchant/dashboard', { replace: true });
+            return;
+        }
+
+        if (discoveryMode === 'stores') {
+            fetchStores();
+        } else {
+            fetchGlobalProducts();
+        }
+    }, [viewMode, discoveryMode, cleanRole, navigate]);
 
     const fetchStores = async () => {
         setLoading(true);
@@ -54,6 +74,35 @@ const CustomerDashboard = () => {
         } catch (err) {
             console.error("Error fetching stores", err);
             setStores([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchGlobalProducts = async () => {
+        setLoading(true);
+        try {
+            const storeRes = await axios.get(`http://localhost:2121/api/stores`);
+            const fetchedStores = Array.isArray(storeRes.data) ? storeRes.data : [];
+            
+            let allProductsList = [];
+            for (const store of fetchedStores) {
+                try {
+                    const prodRes = await axios.get(`http://localhost:2121/api/stores/${store.id}/products`);
+                    const storeProds = Array.isArray(prodRes.data) ? prodRes.data.map(p => ({
+                        ...p,
+                        shopName: store.shopName || store.name,
+                        ownerName: store.name
+                    })) : [];
+                    allProductsList = [...allProductsList, ...storeProds];
+                } catch (e) {
+                    // skip store if products fail
+                }
+            }
+            setGlobalProducts(allProductsList);
+        } catch (err) {
+            console.error("Error fetching global product feed", err);
+            setGlobalProducts([]);
         } finally {
             setLoading(false);
         }
@@ -112,7 +161,7 @@ const CustomerDashboard = () => {
             alert("Product added to cart successfully! 🛒");
         } catch (err) {
             console.error("Failed to add product to cart", err);
-            alert("Could not add item to cart.");
+            alert(err.response?.data?.message || err.response?.data || "Could not add item to cart.");
         }
     };
 
@@ -141,45 +190,60 @@ const CustomerDashboard = () => {
             {/* DUAL TOGGLE BAR */}
             {!selectedStore && (
                 <div style={{ display: 'flex', background: 'white', padding: '10px 20px', borderRadius: '8px', marginBottom: '20px', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #D8CFE2' }}>
-                    <span style={{ fontWeight: 'bold', color: '#4C2365', fontSize: '14px' }}>Store Discovery Mode:</span>
-                    <div style={{ display: 'flex', gap: '5px', background: '#f5f2f8', padding: '4px', borderRadius: '6px' }}>
-                        <button 
-                            onClick={() => setViewMode('all')}
-                            style={{
-                                padding: '8px 16px',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                fontSize: '13px',
-                                background: viewMode === 'all' ? '#4C2365' : 'transparent',
-                                color: viewMode === 'all' ? '#white' : '#7F6091',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            🌐 All Stores (Global)
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('nearby')}
-                            style={{
-                                padding: '8px 16px',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontWeight: 'bold',
-                                fontSize: '13px',
-                                background: viewMode === 'nearby' ? '#4C2365' : 'transparent',
-                                color: viewMode === 'nearby' ? '#white' : '#7F6091',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            📍 Nearby Stores (10-15km)
-                        </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <span style={{ fontWeight: 'bold', color: '#4C2365', fontSize: '14px' }}>Store Discovery Mode:</span>
+                        <div style={{ display: 'flex', gap: '5px', background: '#f5f2f8', padding: '4px', borderRadius: '6px' }}>
+                            <button 
+                                onClick={() => setDiscoveryMode('stores')}
+                                style={{
+                                    padding: '6px 14px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px',
+                                    background: discoveryMode === 'stores' ? '#4C2365' : 'transparent',
+                                    color: discoveryMode === 'stores' ? '#fff' : '#7F6091'
+                                }}
+                            >
+                                🏪 Store-by-Store
+                            </button>
+                            <button 
+                                onClick={() => setDiscoveryMode('global-feed')}
+                                style={{
+                                    padding: '6px 14px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px',
+                                    background: discoveryMode === 'global-feed' ? '#4C2365' : 'transparent',
+                                    color: discoveryMode === 'global-feed' ? '#fff' : '#7F6091'
+                                }}
+                            >
+                                🌐 Open Global Item Feed
+                            </button>
+                        </div>
                     </div>
+
+                    {discoveryMode === 'stores' && (
+                        <div style={{ display: 'flex', gap: '5px', background: '#f5f2f8', padding: '4px', borderRadius: '6px' }}>
+                            <button 
+                                onClick={() => setViewMode('all')}
+                                style={{
+                                    padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px',
+                                    background: viewMode === 'all' ? '#7F6091' : 'transparent',
+                                    color: viewMode === 'all' ? '#fff' : '#7F6091'
+                                }}
+                            >
+                                All Stores
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('nearby')}
+                                style={{
+                                    padding: '6px 12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px',
+                                    background: viewMode === 'nearby' ? '#7F6091' : 'transparent',
+                                    color: viewMode === 'nearby' ? '#fff' : '#7F6091'
+                                }}
+                            >
+                                Nearby (10-15km)
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {/* Store Products View vs Store List View */}
+            {/* Store Products View vs Global Feed vs Store List View */}
             {selectedStore ? (
                 <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #D8CFE2' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -207,6 +271,54 @@ const CustomerDashboard = () => {
                                     style={{ background: '#fff', padding: '15px', borderRadius: '6px', border: '1px solid #D8CFE2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}
                                 >
                                     <div>
+                                        {product.images && product.images.length > 0 ? (
+                                            <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', marginBottom: '8px', paddingBottom: '4px' }}>
+                                                {product.images.map((img, idx) => (
+                                                    <img key={idx} src={`http://localhost:2121${img.imageUrl}`} alt={product.name} style={{ width: '60px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #D8CFE2' }} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div style={{ width: '100%', height: '140px', background: '#f5f2f8', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7F6091', marginBottom: '10px' }}>No Image</div>
+                                        )}
+                                        <h4 style={{ margin: '0 0 5px 0', color: '#4C2365' }}>{product.name}</h4>
+                                        <p style={{ fontSize: '13px', color: '#666', margin: '5px 0' }}>{product.description}</p>
+                                    </div>
+                                    <div style={{ marginTop: '15px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                            <span style={{ fontWeight: 'bold', color: '#28a745', fontSize: '16px' }}>₹{product.price}</span>
+                                            <span style={{ fontSize: '12px', background: '#f5f2f8', color: '#4C2365', padding: '2px 6px', borderRadius: '4px' }}>Stock: {product.stockQuantity}</span>
+                                        </div>
+                                        <button 
+                                            style={{ width: '100%', padding: '8px', background: '#4C2365', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                                            onClick={(e) => { e.stopPropagation(); handleAddToCart(product.id, 1); }}
+                                        >
+                                            Add to Cart
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            ) : discoveryMode === 'global-feed' ? (
+                <div style={{ background: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #D8CFE2' }}>
+                    <h3 style={{ marginTop: 0, color: '#4C2365' }}>🌐 Open Global Item Feed (All Stores Combined)</h3>
+                    {loading ? (
+                        <p>Loading global items feed...</p>
+                    ) : globalProducts.length === 0 ? (
+                        <p style={{ color: '#666' }}>No products available across stores currently.</p>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+                            {globalProducts.map(product => (
+                                <div 
+                                    key={product.id} 
+                                    onClick={() => setSelectedModalProduct(product)}
+                                    style={{ background: '#fff', padding: '15px', borderRadius: '6px', border: '1px solid #D8CFE2', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' }}
+                                >
+                                    <div>
+                                        <span style={{ fontSize: '10px', background: '#f5f2f8', color: '#4C2365', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', display: 'inline-block', marginBottom: '6px' }}>
+                                            🏪 Store: {product.shopName || 'Local Store'}
+                                        </span>
                                         {product.images && product.images.length > 0 ? (
                                             <div style={{ display: 'flex', gap: '5px', overflowX: 'auto', marginBottom: '8px', paddingBottom: '4px' }}>
                                                 {product.images.map((img, idx) => (

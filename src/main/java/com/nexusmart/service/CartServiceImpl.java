@@ -30,8 +30,9 @@ public class CartServiceImpl implements CartService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        if (user.getRole() == Role.MERCHANT) {
-            throw new RuntimeException("Access Denied: Merchants do not hold buying carts.");
+        // 🛑 STRICT ROLE GUARDRAIL: Block Admins and Merchants from shopping carts
+        if (user.getRole() == Role.MERCHANT || user.getRole() == Role.ADMIN) {
+            throw new RuntimeException("Access Denied: Administrators and Merchants do not hold buying carts.");
         }
 
         Product product = productRepository.findById(productId)
@@ -52,7 +53,8 @@ public class CartServiceImpl implements CartService {
             Long incomingMerchantId = product.getMerchant().getId();
 
             if (!existingMerchantId.equals(incomingMerchantId)) {
-                throw new IllegalStateException("Cannot mix items from different stores in one order. Clear cart first.");
+                throw new IllegalStateException(
+                        "Cannot mix items from different stores in one order. Clear cart first.");
             }
         }
 

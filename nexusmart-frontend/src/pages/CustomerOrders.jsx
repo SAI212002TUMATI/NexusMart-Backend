@@ -21,27 +21,61 @@ const CustomerOrders = () => {
         return null;
     };
 
-    useEffect(() => {
-        const userId = getUserId();
-        const fetchOrders = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const endpoint = userId ? `http://localhost:2121/api/orders/user/${userId}` : 'http://localhost:2121/api/orders';
-                const response = await fetch(endpoint, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setOrders(Array.isArray(data) ? data : []);
-                }
-            } catch (err) {
-                console.error("Error fetching order history:", err);
-            } finally {
-                setLoading(false);
+    const fetchOrders = async () => {
+        try {
+            const userId = getUserId();
+            const token = localStorage.getItem('token');
+            const endpoint = userId ? `http://localhost:2121/api/orders/user/${userId}` : 'http://localhost:2121/api/orders';
+            const response = await fetch(endpoint, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setOrders(Array.isArray(data) ? data : []);
             }
-        };
+        } catch (err) {
+            console.error("Error fetching order history:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchOrders();
     }, []);
+
+    // 🚫 Handle Self-Cancellation by Customer
+    const handleCancelOrder = async (orderId) => {
+        if (!window.confirm("Are you sure you want to cancel this order?")) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const userId = getUserId();
+
+            if (!userId) {
+                alert("User session missing. Please log in again.");
+                return;
+            }
+
+            const response = await fetch(`http://localhost:2121/api/orders/${orderId}/cancel?userId=${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                alert('🚫 Order cancelled successfully.');
+                fetchOrders(); // Refresh order history list
+            } else {
+                const errorText = await response.text();
+                alert(`Failed to cancel order: ${errorText || 'Server error'}`);
+            }
+        } catch (err) {
+            console.error('Cancellation error:', err);
+            alert('Could not connect to backend server.');
+        }
+    };
 
     return (
         <div style={{ minHeight: '100vh', background: '#0f0817', color: '#fff', padding: '30px' }}>
@@ -110,8 +144,8 @@ const CustomerOrders = () => {
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
                                             <span style={{ 
-                                                background: '#f59e0b', 
-                                                color: '#000', 
+                                                background: orderStatus === 'CANCELLED' ? '#ef4444' : orderStatus === 'DELIVERED' ? '#22c55e' : '#f59e0b', 
+                                                color: orderStatus === 'CANCELLED' || orderStatus === 'DELIVERED' ? '#fff' : '#000', 
                                                 padding: '4px 12px', 
                                                 borderRadius: '6px', 
                                                 fontSize: '11px', 
@@ -127,8 +161,20 @@ const CustomerOrders = () => {
                                     </div>
 
                                     <div style={{ borderTop: '1px solid rgba(216, 207, 226, 0.1)', paddingTop: '15px', marginTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <span style={{ fontSize: '14px', color: '#D8CFE2', fontWeight: 'bold' }}>Total Amount:</span>
-                                        <span style={{ fontSize: '18px', color: '#4ade80', fontWeight: 'bold' }}>₹{totalAmount}</span>
+                                        <div>
+                                            <span style={{ fontSize: '14px', color: '#D8CFE2', fontWeight: 'bold' }}>Total Amount: </span>
+                                            <span style={{ fontSize: '18px', color: '#4ade80', fontWeight: 'bold', marginLeft: '8px' }}>₹{totalAmount}</span>
+                                        </div>
+
+                                        {/* 🛑 Customer Self-Cancellation Button (Only active when status is PLACED) */}
+                                        {orderStatus === 'PLACED' && (
+                                            <button 
+                                                onClick={() => handleCancelOrder(order.id)}
+                                                style={{ background: '#dc3545', color: '#fff', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px', boxShadow: '0 2px 10px rgba(220, 53, 69, 0.3)' }}
+                                            >
+                                                Cancel Order
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             );

@@ -5,9 +5,10 @@ import axios from 'axios';
 const MerchantDashboard = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('inventory'); // 'inventory' or 'orders'
+    const [orderSubTab, setOrderSubTab] = useState('active'); // 'active' or 'delivered'
     const [inventory, setInventory] = useState([]);
     const [orders, setOrders] = useState([]);
-    const [categories, setCategories] = useState([]); // 👈 Categories state added
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
 
     // Add Product Modal State
@@ -16,22 +17,20 @@ const MerchantDashboard = () => {
     const [productDescription, setProductDescription] = useState('');
     const [productPrice, setProductPrice] = useState('');
     const [productStock, setProductStock] = useState('');
-    const [productCategoryId, setProductCategoryId] = useState(''); // 👈 Default to empty until categories load
-    const [imageFiles, setImageFiles] = useState([]); // Local files state
+    const [productCategoryId, setProductCategoryId] = useState('');
+    const [imageFiles, setImageFiles] = useState([]);
 
     const merchantUser = JSON.parse(localStorage.getItem('user')) || {};
-    
-    // Explicitly target ID 5 for your current account to bypass the missing ID in localStorage
     const merchantId = 5;
 
     useEffect(() => {
         if (activeTab === 'inventory') {
             fetchInventory();
         } else {
-            fetchMerchantOrders();
+            fetchMerchantOrders(orderSubTab);
         }
-        fetchCategories(); // 👈 Fetch categories on load
-    }, [activeTab]);
+        fetchCategories();
+    }, [activeTab, orderSubTab]);
 
     const fetchCategories = async () => {
         try {
@@ -61,14 +60,21 @@ const MerchantDashboard = () => {
         }
     };
 
-    const fetchMerchantOrders = async () => {
+    const fetchMerchantOrders = async (subTab) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            // If backend supports status parameter, you can pass status or filter client-side/server-side
             const response = await axios.get(`http://localhost:2121/api/merchant/orders`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setOrders(Array.isArray(response.data) ? response.data : []);
+            const allOrders = Array.isArray(response.data) ? response.data : [];
+            
+            if (subTab === 'delivered') {
+                setOrders(allOrders.filter(o => o.status === 'DELIVERED'));
+            } else {
+                setOrders(allOrders.filter(o => o.status !== 'DELIVERED'));
+            }
         } catch (err) {
             console.error("Error fetching merchant orders", err);
             setOrders([]);
@@ -84,7 +90,7 @@ const MerchantDashboard = () => {
                 params: { status: newStatus },
                 headers: { Authorization: `Bearer ${token}` }
             });
-            fetchMerchantOrders();
+            fetchMerchantOrders(orderSubTab);
         } catch (err) {
             console.error("Failed to update order status", err);
             alert("Could not update order status.");
@@ -99,13 +105,12 @@ const MerchantDashboard = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            
             const formData = new FormData();
             formData.append('name', productName);
             formData.append('description', productDescription);
             formData.append('price', productPrice);
             formData.append('stockQuantity', productStock);
-            formData.append('merchantId', merchantId); // Explicitly sends ID 5
+            formData.append('merchantId', merchantId);
             formData.append('categoryId', productCategoryId);
 
             if (imageFiles.length > 0) {
@@ -115,9 +120,7 @@ const MerchantDashboard = () => {
             }
 
             await axios.post(`http://localhost:2121/api/products`, formData, {
-                headers: { 
-                    Authorization: `Bearer ${token}`
-                }
+                headers: { Authorization: `Bearer ${token}` }
             });
 
             alert('Product added successfully with local images!');
@@ -248,7 +251,6 @@ const MerchantDashboard = () => {
                                             </select>
                                         </div>
                                     </div>
-
                                     <div>
                                         <label style={{ display: 'block', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>Select Product Images (Multi-angle from computer)</label>
                                         <input 
@@ -308,11 +310,30 @@ const MerchantDashboard = () => {
 
                 {activeTab === 'orders' && (
                     <div>
-                        <h3 style={{ marginTop: 0 }}>Incoming Customer Orders</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0 }}>Customer Orders</h3>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button 
+                                    onClick={() => setOrderSubTab('active')}
+                                    style={{ padding: '6px 14px', background: orderSubTab === 'active' ? '#4C2365' : '#f1f1f1', color: orderSubTab === 'active' ? 'white' : '#333', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+                                >
+                                    📥 Active Orders
+                                </button>
+                                <button 
+                                    onClick={() => setOrderSubTab('delivered')}
+                                    style={{ padding: '6px 14px', background: orderSubTab === 'delivered' ? '#28a745' : '#f1f1f1', color: orderSubTab === 'delivered' ? 'white' : '#333', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }}
+                                >
+                                    📦 Delivered History
+                                </button>
+                            </div>
+                        </div>
+
                         {loading ? (
                             <p>Loading orders...</p>
                         ) : orders.length === 0 ? (
-                            <p style={{ color: '#666' }}>No active orders right now.</p>
+                            <p style={{ color: '#666' }}>
+                                {orderSubTab === 'delivered' ? 'No delivered order history found yet.' : 'No active orders right now.'}
+                            </p>
                         ) : (
                             <div style={{ display: 'grid', gap: '15px' }}>
                                 {orders.map(order => (
@@ -332,11 +353,15 @@ const MerchantDashboard = () => {
                                         </ul>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '10px' }}>
                                             <span style={{ fontWeight: 'bold' }}>Total: <span style={{ color: '#28a745' }}>₹{order.totalAmount}</span></span>
-                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                <button onClick={() => handleUpdateStatus(order.id, 'PROCESSING')} style={{ padding: '5px 10px', background: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Processing</button>
-                                                <button onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')} style={{ padding: '5px 10px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Out for Delivery</button>
-                                                <button onClick={() => handleUpdateStatus(order.id, 'DELIVERED')} style={{ padding: '5px 10px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Delivered</button>
-                                            </div>
+                                            {order.status !== 'DELIVERED' ? (
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button onClick={() => handleUpdateStatus(order.id, 'PROCESSING')} style={{ padding: '5px 10px', background: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Processing</button>
+                                                    <button onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')} style={{ padding: '5px 10px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Out for Delivery</button>
+                                                    <button onClick={() => handleUpdateStatus(order.id, 'DELIVERED')} style={{ padding: '5px 10px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>Delivered</button>
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '12px', color: '#28a745', fontWeight: 'bold' }}>✔️ Successfully Fulfilled</span>
+                                            )}
                                         </div>
                                     </div>
                                 ))}

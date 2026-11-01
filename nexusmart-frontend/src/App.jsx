@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import VerifyOtpPage from './pages/VerifyOtpPage';
 import CustomerDashboard from './pages/customer/CustomerDashboard';
 import MerchantDashboard from './pages/merchant/MerchantDashboard';
+import AdminDashboard from './pages/AdminDashboard'; // 🚀 Import your Admin Dashboard
 import Cart from './pages/Cart';
 import CustomerOrders from './pages/CustomerOrders';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -41,7 +42,9 @@ const Navbar = () => {
   };
 
   const handleDashboardRedirect = () => {
-    if (role.includes('MERCHANT')) {
+    if (role.includes('ADMIN')) {
+      navigate('/admin');
+    } else if (role.includes('MERCHANT')) {
       navigate('/merchant/dashboard');
     } else {
       navigate('/customer/dashboard');
@@ -69,9 +72,9 @@ const Navbar = () => {
           <>
             <button 
               onClick={handleDashboardRedirect} 
-              style={{ padding: '8px 18px', background: 'transparent', color: '#D8CFE2', border: '1px solid #7F6091', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
+              style={{ padding: '8px 18px', background: role.includes('ADMIN') ? '#7F6091' : 'transparent', color: '#D8CFE2', border: '1px solid #7F6091', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px' }}
             >
-              Dashboard 📊
+              {role.includes('ADMIN') ? 'Admin Control Center 🛡️' : 'Dashboard 📊'}
             </button>
             <button 
               onClick={handleLogout} 
@@ -98,32 +101,29 @@ const Navbar = () => {
 // Smart Home Landing View Component
 const HomeView = () => {
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  const role = getCurrentUserRole();
 
   const handleStartShopping = () => {
-    const token = localStorage.getItem('token');
-    const role = getCurrentUserRole();
-
     if (!token) {
       navigate('/login');
       return;
     }
-
-    if (role.includes('MERCHANT')) {
-      alert("You are currently logged in as a Merchant. Switching view to Customer Dashboard.");
+    if (role.includes('ADMIN')) {
+      navigate('/admin');
+      return;
     }
     navigate('/customer/dashboard');
   };
 
   const handleMerchantPortal = () => {
-    const token = localStorage.getItem('token');
-    const role = getCurrentUserRole();
-
     if (!token) {
       navigate('/login');
       return;
     }
-
-    if (role.includes('MERCHANT')) {
+    if (role.includes('ADMIN')) {
+      navigate('/admin');
+    } else if (role.includes('MERCHANT')) {
       navigate('/merchant/dashboard');
     } else {
       alert("You are logged in as a Customer. Please log out and sign in with a Merchant account to access the Merchant Portal.");
@@ -142,19 +142,30 @@ const HomeView = () => {
         Discover real-time inventory from nearby merchants, place orders instantly, and track local delivery.
       </p>
       
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-        <button 
-          onClick={handleStartShopping} 
-          style={{ padding: '14px 32px', background: '#4C2365', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 20px rgba(76, 35, 101, 0.5)' }}
-        >
-          Start Shopping 🛒
-        </button>
-        <button 
-          onClick={handleMerchantPortal} 
-          style={{ padding: '14px 32px', background: 'rgba(255,255,255,0.05)', color: '#D8CFE2', border: '1px solid #7F6091', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
-        >
-          Merchant Portal 🏪
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
+        {role.includes('ADMIN') ? (
+          <button 
+            onClick={() => navigate('/admin')} 
+            style={{ padding: '14px 32px', background: '#7F6091', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 20px rgba(127, 96, 145, 0.5)' }}
+          >
+            Go to Admin Command Center 🛡️
+          </button>
+        ) : (
+          <>
+            <button 
+              onClick={handleStartShopping} 
+              style={{ padding: '14px 32px', background: '#4C2365', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 20px rgba(76, 35, 101, 0.5)' }}
+            >
+              Start Shopping 🛒
+            </button>
+            <button 
+              onClick={handleMerchantPortal} 
+              style={{ padding: '14px 32px', background: 'rgba(255,255,255,0.05)', color: '#D8CFE2', border: '1px solid #7F6091', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' }}
+            >
+              Merchant Portal 🏪
+            </button>
+          </>
+        )}
       </div>
 
       {/* Quick Feature Grid */}
@@ -224,6 +235,16 @@ function App() {
             element={
               <ProtectedRoute allowedRole="MERCHANT">
                 <MerchantDashboard />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* 🚀 Protected Admin Route */}
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <AdminDashboard />
               </ProtectedRoute>
             } 
           />

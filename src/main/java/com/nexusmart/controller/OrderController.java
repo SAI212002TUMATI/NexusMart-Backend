@@ -18,14 +18,29 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping({"/checkout","/place"})
+    @PostMapping({ "/checkout", "/place" })
     public ResponseEntity<Order> placeOrder(
-            @RequestParam Long userId, 
+            @RequestParam Long userId,
             @RequestParam Long merchantId,
             @RequestParam(defaultValue = "HOME_DELIVERY") Order.FulfillmentType fulfillmentType,
             @RequestParam(defaultValue = "COD") Order.PaymentType paymentType) {
-        
+
         Order order = orderService.placeOrder(userId, merchantId, fulfillmentType, paymentType);
+        return ResponseEntity.ok(order);
+    }
+
+    // 🚀 NEW: Direct Order Endpoint for "Order Now" button
+    @PostMapping("/direct")
+    public ResponseEntity<Order> placeDirectOrder(
+            @RequestParam Long userId,
+            @RequestParam Long merchantId,
+            @RequestParam Long productId,
+            @RequestParam int quantity,
+            @RequestParam(defaultValue = "HOME_DELIVERY") Order.FulfillmentType fulfillmentType,
+            @RequestParam(defaultValue = "COD") Order.PaymentType paymentType) {
+
+        Order order = orderService.placeDirectOrder(userId, merchantId, productId, quantity, fulfillmentType,
+                paymentType);
         return ResponseEntity.ok(order);
     }
 
@@ -37,10 +52,17 @@ public class OrderController {
 
     @PutMapping("/{orderId}/status")
     public ResponseEntity<Order> updateOrderStatus(
-            @PathVariable Long orderId, 
+            @PathVariable Long orderId,
             @RequestParam OrderStatus status) {
         Order updatedOrder = orderService.updateOrderStatus(orderId, status);
         return ResponseEntity.ok(updatedOrder);
     }
 
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<Order> cancelOrder(
+            @PathVariable Long orderId,
+            @RequestParam Long userId) {
+        Order cancelledOrder = orderService.cancelOrder(orderId, userId);
+        return ResponseEntity.ok(cancelledOrder);
+    }
 }

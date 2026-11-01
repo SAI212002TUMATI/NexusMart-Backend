@@ -43,7 +43,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/protected/**").permitAll()
                         .requestMatchers("/api/cart/**").permitAll()
                         .requestMatchers("/api/categories/**").permitAll()
-                        .requestMatchers("/api/orders/**").permitAll()
+                        // 🚀 Added Admin API protection
+                        .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/orders/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/orders/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/orders/**").permitAll()
                         .requestMatchers("/api/ai-search", "/api/ai-search/**").permitAll()
                         .requestMatchers("/api/ai-assistant", "/api/ai-assistant/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()

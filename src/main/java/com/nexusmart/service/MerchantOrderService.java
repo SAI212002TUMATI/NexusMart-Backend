@@ -20,13 +20,22 @@ public class MerchantOrderService {
     public List<Order> getOrdersByStatus(String merchantEmail, OrderStatus status) {
         User merchant = userRepository.findByEmail(merchantEmail)
                 .orElseThrow(() -> new RuntimeException("Merchant not found"));
+
+        // 🚀 Explicitly handle the DELIVERED tab to include both DELIVERED and
+        // COMPLETED statuses
+        if (status == OrderStatus.DELIVERED) {
+            return orderRepository.findByMerchantIdAndStatusInOrderByOrderDateDesc(
+                    merchant.getId(),
+                    List.of(OrderStatus.DELIVERED, OrderStatus.COMPLETED));
+        }
+
         return orderRepository.findByMerchantIdAndStatusOrderByOrderDateDesc(merchant.getId(), status);
     }
 
     public Order updateOrderStatus(String merchantEmail, Long orderId, OrderStatus newStatus) {
         User merchant = userRepository.findByEmail(merchantEmail)
                 .orElseThrow(() -> new RuntimeException("Merchant not found"));
-        
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 

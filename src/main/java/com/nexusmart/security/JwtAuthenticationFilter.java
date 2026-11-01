@@ -46,9 +46,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt)) {
 
-                    // Assign the default MERCHANT role authority for secure endpoints
+                    // 🚀 Dynamically extract the actual role from the token
+                    String role = jwtUtil.extractRole(jwt); // e.g., "ADMIN" or "MERCHANT"
+                    if (role == null) {
+                        role = "CUSTOMER"; // fallback
+                    }
+
+                    // Format authority correctly for Spring Security (e.g., "ROLE_ADMIN")
+                    String authorityName = role.startsWith("ROLE_") ? role.toUpperCase() : "ROLE_" + role.toUpperCase();
+
                     List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                            new SimpleGrantedAuthority("ROLE_MERCHANT"));
+                            new SimpleGrantedAuthority(authorityName));
 
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userEmail,

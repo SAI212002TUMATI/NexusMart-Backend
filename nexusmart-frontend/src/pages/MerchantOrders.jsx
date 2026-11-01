@@ -95,31 +95,40 @@ const MerchantOrders = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                {['PLACED', 'PROCESSING', 'OUT_FOR_DELIVERY', 'DELIVERED'].map(st => (
+            {/* Status Tabs including Delivered History */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                {[
+                    { key: 'PLACED', label: '📥 Placed Orders' },
+                    { key: 'PROCESSING', label: '⚙️ Processing' },
+                    { key: 'OUT_FOR_DELIVERY', label: '🛵 Out for Delivery' },
+                    { key: 'DELIVERED', label: '📦 Delivered History' }
+                ].map(tab => (
                     <button 
-                        key={st}
-                        onClick={() => setSelectedStatus(st)}
+                        key={tab.key}
+                        onClick={() => setSelectedStatus(tab.key)}
                         style={{
-                            padding: '8px 16px',
-                            background: selectedStatus === st ? '#2b8a3e' : '#fff',
-                            color: selectedStatus === st ? '#fff' : '#333',
-                            border: '1px solid #ccc',
-                            borderRadius: '4px',
+                            padding: '10px 18px',
+                            background: selectedStatus === tab.key ? '#4C2365' : '#fff',
+                            color: selectedStatus === tab.key ? '#fff' : '#333',
+                            border: '1px solid #D8CFE2',
+                            borderRadius: '6px',
                             cursor: 'pointer',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            boxShadow: selectedStatus === tab.key ? '0 2px 6px rgba(76,35,101,0.3)' : 'none'
                         }}
                     >
-                        {st.replace(/_/g, ' ')}
+                        {tab.label}
                     </button>
                 ))}
             </div>
 
             {loading ? (
-                <p>Loading incoming orders...</p>
+                <p>Loading orders...</p>
             ) : orders.length === 0 ? (
                 <div style={{ background: 'white', padding: '40px', textAlign: 'center', borderRadius: '8px', border: '1px solid #ddd' }}>
-                    <p style={{ color: '#666', fontSize: '18px' }}>No orders found with status '{selectedStatus}'.</p>
+                    <p style={{ color: '#666', fontSize: '18px' }}>
+                        {selectedStatus === 'DELIVERED' ? 'No delivered order history found yet.' : `No active orders found with status '${selectedStatus}'.`}
+                    </p>
                 </div>
             ) : (
                 orders.map(order => {
@@ -166,30 +175,34 @@ const MerchantOrders = () => {
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f3f5', paddingTop: '15px', marginTop: '10px' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>Update Fulfillment Status:</span>
-                                <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button 
-                                        disabled={order.status === 'PROCESSING'}
-                                        onClick={() => handleUpdateStatus(order.id, 'PROCESSING')}
-                                        style={{ padding: '6px 12px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                                    >
-                                        Mark Processing
-                                    </button>
-                                    <button 
-                                        disabled={order.status === 'OUT_FOR_DELIVERY'}
-                                        onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')}
-                                        style={{ padding: '6px 12px', background: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                                    >
-                                        Out for Delivery 🛵
-                                    </button>
-                                    <button 
-                                        disabled={order.status === 'DELIVERED'}
-                                        onClick={() => handleUpdateStatus(order.id, 'DELIVERED')}
-                                        style={{ padding: '6px 12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
-                                    >
-                                        Mark Delivered ✔️
-                                    </button>
-                                </div>
+                                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#555' }}>
+                                    {order.status === 'DELIVERED' ? '✅ Order Successfully Fulfilled & Delivered' : 'Update Fulfillment Status:'}
+                                </span>
+                                {order.status !== 'DELIVERED' && (
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button 
+                                            disabled={order.status === 'PROCESSING'}
+                                            onClick={() => handleUpdateStatus(order.id, 'PROCESSING')}
+                                            style={{ padding: '6px 12px', background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                                        >
+                                            Mark Processing
+                                        </button>
+                                        <button 
+                                            disabled={order.status === 'OUT_FOR_DELIVERY'}
+                                            onClick={() => handleUpdateStatus(order.id, 'OUT_FOR_DELIVERY')}
+                                            style={{ padding: '6px 12px', background: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                                        >
+                                            Out for Delivery 🛵
+                                        </button>
+                                        <button 
+                                            disabled={order.status === 'DELIVERED'}
+                                            onClick={() => handleUpdateStatus(order.id, 'DELIVERED')}
+                                            style={{ padding: '6px 12px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                                        >
+                                            Mark Delivered ✔️
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );

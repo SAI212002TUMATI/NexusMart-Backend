@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -23,19 +23,17 @@ const LoginPage = () => {
             if (response.ok) {
                 const data = await response.json();
                 
-                // 1. Save token and user info to localStorage
                 localStorage.setItem('token', data.token || data.accessToken);
-                
-                // Extract role reliably whether it's nested or a direct string
                 const role = data.role || data.user?.role || data.authorities?.[0]?.authority || 'CUSTOMER';
                 localStorage.setItem('role', role);
                 localStorage.setItem('user', JSON.stringify(data.user || data));
 
-                // 2. Clean and normalize role for redirection
                 const cleanRole = role.replace('ROLE_', '').toUpperCase();
 
-                // 3. Route to respective dashboard based on role
-                if (cleanRole === 'MERCHANT') {
+                // 🌟 ROUTE DIRECTLY BASED ON ROLE
+                if (cleanRole === 'ADMIN') {
+                    navigate('/admin/dashboard');
+                } else if (cleanRole === 'MERCHANT') {
                     navigate('/merchant/dashboard');
                 } else {
                     navigate('/customer/dashboard');
@@ -117,9 +115,14 @@ const LoginPage = () => {
                     </div>
 
                     <div>
-                        <label style={{ display: 'block', color: '#D8CFE2', fontSize: '13px', marginBottom: '6px', fontWeight: 'bold' }}>
-                            Password
-                        </label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ color: '#D8CFE2', fontSize: '13px', fontWeight: 'bold' }}>
+                                Password
+                            </label>
+                            <Link to="/forgot-password" style={{ color: '#b5a4c3', fontSize: '12px', textDecoration: 'none' }}>
+                                Forgot Password?
+                            </Link>
+                        </div>
                         <input 
                             type="password" 
                             required
@@ -154,7 +157,6 @@ const LoginPage = () => {
                             fontWeight: 'bold',
                             cursor: 'pointer',
                             boxShadow: '0 4px 15px rgba(76, 35, 101, 0.4)',
-                            transition: 'opacity 0.2s',
                             opacity: loading ? 0.7 : 1,
                             marginTop: '10px'
                         }}
@@ -162,6 +164,10 @@ const LoginPage = () => {
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
+
+                <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: '#B5A4C3' }}>
+                    Don't have an account? <Link to="/register" style={{ color: '#D8CFE2', fontWeight: 'bold' }}>Register here</Link>
+                </p>
             </div>
         </div>
     );
